@@ -1,9 +1,7 @@
 import streamlit as st
 import cv2
 from ultralytics import YOLO
-from PIL import Image
 
-# ---------------- Sidebar ----------------
 st.sidebar.title("📄 About This App")
 st.sidebar.markdown("""
 An interactive object detection app using YOLOv5/YOLOv8.
@@ -14,53 +12,46 @@ Click "**Stop Detection**" to stop it.
 Powered by **LUMI MATE AI**.
 """)
 
-# ---------------- Main Title ----------------
 st.title("🎯 Button-Controlled Object Detection")
 st.markdown("Click '**Start Detection**' to activate real-time object detection using YOLO. Then click '**Stop Detection**' to stop.")
 
-# Frame container
-FRAME_WINDOW = st.image([])
-
-# Load YOLO model
-model = YOLO("yolov8s.pt")
-
-# ---------------- Detection Control ----------------
-# Use session state to persist detection state
+# Initialize detection state and capture in session_state
 if "detecting" not in st.session_state:
     st.session_state.detecting = False
+if "cap" not in st.session_state:
+    st.session_state.cap = None
 
 col1, col2 = st.columns(2)
 with col1:
     if st.button("▶️ Start Detection"):
         st.session_state.detecting = True
+        if st.session_state.cap is None:
+            st.session_state.cap = cv2.VideoCapture(0)
 with col2:
     if st.button("⏹ Stop Detection"):
         st.session_state.detecting = False
+        if st.session_state.cap:
+            st.session_state.cap.release()
+            st.session_state.cap = None
 
-# ---------------- Detection Loop ----------------
-if st.session_state.detecting:
-    cap = cv2.VideoCapture(0)
+model = YOLO("yolov8s.pt")
+FRAME_WINDOW = st.image([])
 
-    if not cap.isOpened():
-        st.error("❌ Could not access the webcam.")
+if st.session_state.detecting and st.session_state.cap is not None:
+    ret, frame = st.session_state.cap.read()
+    if not ret:
+        st.error("❌ Failed to read from webcam.")
+        st.session_state.detecting = False
+        st.session_state.cap.release()
+        st.session_state.cap = None
     else:
-        st.success("✅ Detection started. Click 'Stop Detection' to end.")
-        while st.session_state.detecting:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("❌ Failed to read from webcam.")
-                break
+        results = model(frame, verbose=False)[0]
+        annotated_frame = results.plot()
+        rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+        FRAME_WINDOW.image(rgb_frame)
+else:
+    FRAME_WINDOW.empty()
 
-            results = model(frame, verbose=False)[0]
-            annotated_frame = results.plot()
-            rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(rgb_frame)
-
-        cap.release()
-        FRAME_WINDOW.empty()
-        st.info("🛑 Detection stopped.")
-
-# ---------------- Footer ----------------
 st.markdown("""
 <hr style="margin-top: 50px; margin-bottom: 10px;">
 <div style="text-align: center; font-size: 14px; color: grey;">
