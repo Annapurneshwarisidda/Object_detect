@@ -12,7 +12,7 @@ Click "**Stop Detection**" to stop it.
 Powered by **LUMI MATE AI**.
 """)
 
-st.title("🎯 Button-Controlled Object Detection")
+st.title("🎯 Controlled Object Detection")
 st.markdown("Click '**Start Detection**' to activate real-time object detection using YOLO. Then click '**Stop Detection**' to stop.")
 
 # Initialize detection state and capture in session_state
