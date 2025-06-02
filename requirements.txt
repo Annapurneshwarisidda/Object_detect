@@ -58,6 +58,8 @@ ultralytics==8.3.147
 ultralytics-thop==2.0.14
 urllib3==2.4.0
 watchdog==6.0.0
-streamlit-webrtc
-openai-whisper
+setuptools<81
+wheel
+openai-whisper==20230314
+streamlit-webrtc==0.32.0
 av==10.0.0
