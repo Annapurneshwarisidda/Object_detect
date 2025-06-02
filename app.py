@@ -1,100 +1,64 @@
 import streamlit as st
 import cv2
 from ultralytics import YOLO
-import speech_recognition as sr
-import threading
+from PIL import Image
 
 # ---------------- Sidebar ----------------
 st.sidebar.title("📄 About This App")
 st.sidebar.markdown("""
-A voice-activated object detection app using YOLOv5/YOLOv8.
+An interactive object detection app using YOLOv5/YOLOv8.
 
-🎙️ Say "**start detection**" to begin real-time object detection.  
-Say "**stop detection**" to end it.
+🎯 Click "**Start Detection**" to begin real-time object detection.  
+Click "**Stop Detection**" to stop it.
 
 Powered by **LUMI MATE AI**.
 """)
 
 # ---------------- Main Title ----------------
-st.title("🎙️ Voice-Controlled Object Detection")
-st.markdown("Speak '**start detection**' to activate real-time object detection using YOLO. Then say '**stop detection**' to stop.")
+st.title("🎯 Button-Controlled Object Detection")
+st.markdown("Click '**Start Detection**' to activate real-time object detection using YOLO. Then click '**Stop Detection**' to stop.")
 
+# Frame container
 FRAME_WINDOW = st.image([])
 
 # Load YOLO model
 model = YOLO("yolov8s.pt")
 
-# Shared flag
-detecting = False
+# ---------------- Detection Control ----------------
+# Use session state to persist detection state
+if "detecting" not in st.session_state:
+    st.session_state.detecting = False
 
-# Speech recognizer
-recognizer = sr.Recognizer()
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("▶️ Start Detection"):
+        st.session_state.detecting = True
+with col2:
+    if st.button("⏹ Stop Detection"):
+        st.session_state.detecting = False
 
+# ---------------- Detection Loop ----------------
+if st.session_state.detecting:
+    cap = cv2.VideoCapture(0)
 
-def listen_for_command(trigger_words):
-    """Listen for any phrase in trigger_words list."""
-    with sr.Microphone() as source:
-        try:
-            st.info("🎧 Listening for voice command...")
-            audio = recognizer.listen(source, timeout=5, phrase_time_limit=3)
-            response = recognizer.recognize_google(audio).lower()
-            if any(word in response for word in trigger_words):
-                return response
-            return None
-        except sr.UnknownValueError:
-            st.warning("❗ Could not understand audio.")
-            return None
-        except sr.RequestError as e:
-            st.error(f"⚠️ API Error: {e}")
-            return None
-        except sr.WaitTimeoutError:
-            st.warning("⏱️ Listening timed out.")
-            return None
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
-            return None
-
-
-def voice_listener():
-    """Continuously listens for 'stop detection' in background."""
-    global detecting
-    while detecting:
-        command = listen_for_command(["stop detection"])
-        if command and "stop detection" in command:
-            detecting = False
-            break
-
-
-# Voice command trigger
-if st.button("🎤 Listen for Voice Command"):
-    command = listen_for_command(["start detection"])
-    if command and "start detection" in command:
-        st.success("✅ Voice command recognized: Starting detection...")
-
-        detecting = True
-
-        # Start background thread for stop command
-        listener_thread = threading.Thread(target=voice_listener)
-        listener_thread.start()
-
-        # Start webcam detection
-        cap = cv2.VideoCapture(0)
-        while detecting:
+    if not cap.isOpened():
+        st.error("❌ Could not access the webcam.")
+    else:
+        st.success("✅ Detection started. Click 'Stop Detection' to end.")
+        while st.session_state.detecting:
             ret, frame = cap.read()
             if not ret:
-                st.error("❌ Could not access webcam.")
+                st.error("❌ Failed to read from webcam.")
                 break
 
-            results = model(frame)[0]
+            results = model(frame, verbose=False)[0]
             annotated_frame = results.plot()
             rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
             FRAME_WINDOW.image(rgb_frame)
 
         cap.release()
         FRAME_WINDOW.empty()
-        st.warning("🛑 Detection stopped by voice command.")
-    else:
-        st.warning("❗ Say 'start detection' clearly to begin.")
+        st.info("🛑 Detection stopped.")
 
 # ---------------- Footer ----------------
 st.markdown("""
