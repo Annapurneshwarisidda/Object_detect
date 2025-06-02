@@ -23,10 +23,7 @@ matplotlib==3.7.1
 mpmath==1.3.0
 narwhals==1.41.0
 networkx==3.1
-
-# Updated numpy for Python 3.13 support (replace 1.23.5 with latest stable)
 numpy==1.26.4
-
 opencv-python-headless==4.6.0.66
 packaging==23.1
 pandas==1.5.3
@@ -51,24 +48,13 @@ streamlit==1.24.1
 sympy==1.12
 tenacity>=8.0.0,<9
 toml==0.10.2
-
-# Torch and torchvision updated to latest compatible versions
-torch==2.0.1
-torchvision==0.15.2
-
 tornado==6.1
 tqdm==4.65.0
 typing_extensions==4.5.0
 tzdata==2023.3
-ultralytics==8.0.112
-ultralytics-thop==2.0.14
 urllib3==1.26.16
 watchdog==2.3.1
-
-# setuptools and wheel pinned to ensure build dependencies
 setuptools>=65.0.0
 wheel>=0.38.0
-
-openai-whisper==20230314
 streamlit-webrtc==0.32.0
 av==10.0.0
