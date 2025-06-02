@@ -1,7 +1,9 @@
 import streamlit as st
+from streamlit_webrtc import webrtc_streamer
 import cv2
 from ultralytics import YOLO
-from PIL import Image
+import av
+import numpy as np
 
 # ---------------- Sidebar ----------------
 st.sidebar.title("📄 About This App")
@@ -15,50 +17,31 @@ Powered by **LUMI MATE AI**.
 """)
 
 # ---------------- Main Title ----------------
-st.title("🎯 Button-Controlled Object Detection")
+st.title("🎯 Object Detection")
 st.markdown("Click '**Start Detection**' to activate real-time object detection using YOLO. Then click '**Stop Detection**' to stop.")
 
-# Frame container
-FRAME_WINDOW = st.image([])
-
-# Load YOLO model
+# Load YOLO model once
 model = YOLO("yolov8s.pt")
 
-# ---------------- Detection Control ----------------
-# Use session state to persist detection state
-if "detecting" not in st.session_state:
-    st.session_state.detecting = False
+# Detection processor function for streamlit-webrtc
+def process_frame(frame: av.VideoFrame) -> av.VideoFrame:
+    img = frame.to_ndarray(format="bgr24")
+    results = model(img)[0]
+    annotated_img = results.plot()
+    return av.VideoFrame.from_ndarray(annotated_img, format="bgr24")
 
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("▶️ Start Detection"):
-        st.session_state.detecting = True
-with col2:
-    if st.button("⏹ Stop Detection"):
-        st.session_state.detecting = False
-
-# ---------------- Detection Loop ----------------
-if st.session_state.detecting:
-    cap = cv2.VideoCapture(0)
-
-    if not cap.isOpened():
-        st.error("❌ Could not access the webcam.")
-    else:
-        st.success("✅ Detection started. Click 'Stop Detection' to end.")
-        while st.session_state.detecting:
-            ret, frame = cap.read()
-            if not ret:
-                st.error("❌ Failed to read from webcam.")
-                break
-
-            results = model(frame, verbose=False)[0]
-            annotated_frame = results.plot()
-            rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(rgb_frame)
-
-        cap.release()
-        FRAME_WINDOW.empty()
-        st.info("🛑 Detection stopped.")
+# Streamlit-webrtc widget
+webrtc_ctx = webrtc_streamer(
+    key="object-detection",
+    mode="sendrecv",
+    video_processor_factory=lambda: type(
+        "YOLOProcessor",
+        (),
+        {"recv": process_frame}
+    )(),
+    media_stream_constraints={"video": True, "audio": False},
+    async_processing=True,
+)
 
 # ---------------- Footer ----------------
 st.markdown("""
